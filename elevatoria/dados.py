@@ -81,7 +81,26 @@ def ler_log(texto: str) -> tuple[list[Registro], list[str]]:
       (`contagens=1623` vira `1623.0`; `evento=partida` continua `"partida"`);
     - texto vazio devolve `([], [])`.
     """
-    raise NotImplementedError("issue #1: ler_log")
+
+    textoList = texto.splitlines()
+    ler_log_registros = []
+    ler_log_invalidas = []
+    for l in textoList:
+        matchLinha = LINHA.fullmatch(l)
+        
+        if matchLinha is None:
+            ler_log_invalidas.append(l)
+            continue
+        linhaDict = matchLinha.groupdict()
+        try:
+            datetime.strptime(f"{linhaDict['data']} {linhaDict['hora']}", "%Y-%m-%d %H:%M:S")
+        except:
+            ler_log_invalidas.append(l)
+            continue
+
+        ler_log_registros.append(l)
+
+    return (ler_log_registros, ler_log_invalidas)
 
 
 def por_tag(registros: list[Registro], tag: str) -> list[Registro]:
