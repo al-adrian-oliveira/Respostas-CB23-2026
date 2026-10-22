@@ -153,7 +153,17 @@ def serie(registros: list[Registro], tag: str, chave: str) -> SerieTemporal:
     Os registros da tag sem essa chave (por exemplo, os alarmes de PT102, que não têm
     `contagens`) são ignorados. Crie a série com `SerieTemporal.de_lista`.
     """
-    raise NotImplementedError("issue #1: serie")
+
+    return SerieTemporal.de_lista([
+        r.valores[chave] 
+        for r in registros 
+        if (
+            r.tag == tag 
+            and chave in r.valores
+            and isinstance(r.valores[chave], float)
+        )
+    ])
+
 
 
 # ---------------------------------------------------------------------------------------
