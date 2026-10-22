@@ -43,6 +43,9 @@ LINHA: re.Pattern = re.compile(r"""
 $
 """, re.VERBOSE) # type: ignore[assignment]  # TODO issue #1
 
+PARES: re.Pattern =  re.compile(r"(\w+)=(\S+)")
+TAG: re.Pattern = re.compile(r"[A-Z]{1,2}\d{1,3}")
+
 @dataclass(frozen=True)
 class Registro:
     """Uma linha válida do log: instante, nível, tag e os pares chave=valor convertidos."""
@@ -60,7 +63,7 @@ def valida_tag(s: str) -> bool:
     `"PT1010"`, `"101PT"` e `"PT101 "` (sobra de caracteres).
     """
     
-    return re.fullmatch(r"[A-Z]{1,2}\d{1,3})", s) is not None
+    return TAG.fullmatch(s) is not None
 
 
 def ler_log(texto: str) -> tuple[list[Registro], list[str]]:
@@ -82,23 +85,44 @@ def ler_log(texto: str) -> tuple[list[Registro], list[str]]:
     - texto vazio devolve `([], [])`.
     """
 
-    textoList = texto.splitlines()
     ler_log_registros = []
     ler_log_invalidas = []
-    for l in textoList:
+
+    def converte(s: str) -> float | str:
+        try:
+            return float(s)
+        except ValueError:
+            return s
+
+    for l in texto.splitlines():
+        if not l.strip():
+            continue
         matchLinha = LINHA.fullmatch(l)
         
         if matchLinha is None:
             ler_log_invalidas.append(l)
             continue
+            
         linhaDict = matchLinha.groupdict()
         try:
-            datetime.strptime(f"{linhaDict['data']} {linhaDict['hora']}", "%Y-%m-%d %H:%M:S")
-        except:
+            instante = datetime.strptime(f"{linhaDict['data']} {linhaDict['hora']}", "%Y-%m-%d %H:%M:%S")
+        except ValueError:
             ler_log_invalidas.append(l)
             continue
+        
+        listaParesChaveValor = PARES.findall(linhaDict["resto"])
+        if not listaParesChaveValor:
+            ler_log_invalidas.append(l)
+            continue
+        
+        r = Registro(
+            instante = instante,
+            nivel = linhaDict["nivel"],
+            tag = linhaDict["tag"],
+            valores = { chave: converte(valor) for chave, valor in listaParesChaveValor}
+        )
 
-        ler_log_registros.append(l)
+        ler_log_registros.append(r)
 
     return (ler_log_registros, ler_log_invalidas)
 
