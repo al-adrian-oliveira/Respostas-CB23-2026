@@ -231,7 +231,7 @@ def converter_compreensao(contagens: list[int]) -> list[float]:
 
 def converter_map(contagens: list[int]) -> list[float]:
     """Converte contagens em kPa (`c * 600 / 4095`) com `map` e uma lambda."""
-    return map(lambda c:c * 600 / 4095, contagens)
+    return map(lambda c: c * 600 / 4095, contagens)
 
 def converter_vetorizado(contagens: np.ndarray) -> np.ndarray:
     """Converte contagens em kPa (`c * 600 / 4095`) com uma operação vetorizada do NumPy."""
@@ -248,8 +248,16 @@ def medir_tempos(contagens: np.ndarray, k: int = 10) -> dict[str, float]:
     lista = contagens.tolist()
 
     return {
-        "laço": cronometrar(converter_laco, lista, k),
-        "compreensão": cronometrar(converter_compreensao, lista, k),
-        "map+lambda":  cronometrar(converter_map, lista, k),
-        "vetorizado":  cronometrar(converter_vetorizado, contagens, k)
+    "laço": cronometrar(
+        converter_laco, lista, k=k
+    ),
+    "compreensão": cronometrar(
+        converter_compreensao, lista, k=k
+    ),
+    "map+lambda": cronometrar(
+        converter_map, lista, k=k
+    ),
+    "vetorizado": cronometrar(
+        converter_vetorizado, contagens, k=k
+    )
     }

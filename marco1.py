@@ -53,7 +53,7 @@ def etapa1(texto: str, verdade: dict) -> list:
 
     # (c) Some os pulsos de FT201 (com `serie`) e imprima o volume bombeado na hora (0,1 L/pulso).
     #total = _todo("1(c)")
-    total = serie(registros, "FT201", "contagens")
+    total = serie(registros, "FT201", "contagens").sum()
     assert total == verdade["pulsos_total"]
 
     # (d) valida_tag.
