@@ -31,6 +31,36 @@ class TestRegressaoMediaMovel(unittest.TestCase):
         self.assertTrue(
             np.allclose(resultado, np.arange(571) + 14.5)
         )
-        
+
+class TestReamostrar(unittest.TestCase):
+
+    def test_blocos_completos(self):
+        """Calcula corretamente médias de blocos completos."""
+        s = SerieTemporal.de_lista([1, 2, 3, 4, 5, 6])
+
+        resultado = s.reamostrar(3)
+
+        self.assertTrue(np.allclose(resultado, [2, 5]))
+        self.assertIsInstance(resultado, SerieTemporal)
+
+    def test_descarta_sobra(self):
+        """Descarta os pontos finais de um bloco incompleto."""
+        s = SerieTemporal.de_lista([1, 2, 3, 4, 5, 6, 7, 8])
+
+        resultado = s.reamostrar(3)
+
+        self.assertEqual(len(resultado), 2)
+        self.assertTrue(np.allclose(resultado, [2, 5]))
+
+    def test_k_invalido(self):
+        """Rejeita tamanhos de bloco fora do intervalo permitido."""
+        s = SerieTemporal.de_lista([1, 2, 3])
+
+        with self.assertRaises(ValueError):
+            s.reamostrar(0)
+
+        with self.assertRaises(ValueError):
+            s.reamostrar(4)
+
 if __name__ == "__main__":
     unittest.main()
