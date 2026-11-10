@@ -19,8 +19,6 @@ import numpy as np
 from elevatoria.serie import SerieTemporal
 from fornecido.cronometro import cronometrar
 
-from functools import reduce
-
 # ---------------------------------------------------------------------------------------
 # Issue #1: leitor do log
 # ---------------------------------------------------------------------------------------
@@ -41,9 +39,9 @@ LINHA: re.Pattern = re.compile(r"""
 \s+
 (?P<tag>[A-Z]{1,2}\d{1,3})  # padrão para tag
 \s+
-(?P<resto>\S.*)               # padrão para resto (chave e valosr)
+(?P<resto>\S.*)               # restante, iniciado por caractere não branco
 $
-""", re.VERBOSE) # type: ignore[assignment]  # TODO issue #1
+""", re.VERBOSE)
 
 PARES: re.Pattern =  re.compile(r"(\w+)=(\S+)")
 TAG: re.Pattern = re.compile(r"[A-Z]{1,2}\d{1,3}")
@@ -91,6 +89,7 @@ def ler_log(texto: str) -> tuple[list[Registro], list[str]]:
     ler_log_invalidas = []
 
     def converte(s: str) -> float | str:
+        """Converte um valor numérico em float ou preserva o texto original."""
         try:
             return float(s)
         except ValueError:
@@ -162,7 +161,6 @@ def serie(registros: list[Registro], tag: str, chave: str) -> SerieTemporal:
         if (
             r.tag == tag 
             and chave in r.valores
-            and isinstance(r.valores[chave], float)
         )
     ])
 
@@ -178,12 +176,9 @@ def criar_conversores(escalas: dict[str, float]) -> dict[str, Callable[[float], 
     sua tag, e não o último fator do dicionário (veja a issue #2 no enunciado).
     """
     return {
-        tag: criar_conversor(fator)
+        tag: (lambda c, fator=fator: c * fator)
         for tag, fator in escalas.items()
     }
-
-def criar_conversor(fator: float) -> Callable[[float], float]:
-    return lambda x: x * fator
 
 
 # ---------------------------------------------------------------------------------------
@@ -202,9 +197,10 @@ def medir_memoria(contagens: np.ndarray) -> dict[str, int]:
 
     Levanta `ValueError` se `contagens` não for um ndarray 1D de inteiros.
     """
-    if  (not isinstance(contagens, np.ndarray) 
-         or not contagens.ndim == 1):
-        raise ValueError
+    if (not isinstance(contagens, np.ndarray)
+            or contagens.ndim != 1
+            or not np.issubdtype(contagens.dtype, np.integer)):
+        raise ValueError("contagens deve ser um ndarray 1D de inteiros")
     lista = contagens.tolist()
     arr = array.array("H", lista)
     return {
@@ -231,11 +227,12 @@ def converter_compreensao(contagens: list[int]) -> list[float]:
 
 def converter_map(contagens: list[int]) -> list[float]:
     """Converte contagens em kPa (`c * 600 / 4095`) com `map` e uma lambda."""
-    return map(lambda c: c * 600 / 4095, contagens)
+    return list(map(lambda c: c * 600 / 4095, contagens))
 
 def converter_vetorizado(contagens: np.ndarray) -> np.ndarray:
     """Converte contagens em kPa (`c * 600 / 4095`) com uma operação vetorizada do NumPy."""
-    return contagens * 600 / 4095
+    # A multiplicação em ponto flutuante evita overflow nos inteiros menores.
+    return contagens * 600.0 / 4095
 
 
 def medir_tempos(contagens: np.ndarray, k: int = 10) -> dict[str, float]:
