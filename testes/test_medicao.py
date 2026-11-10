@@ -96,8 +96,10 @@ class TestContratoMedir(unittest.TestCase):
     def test_leitura_no_limiar_e_valida(self) -> None:
         """Uma leitura exatamente no limiar robusto é mantida."""
         valores = np.array([9.0, 10.0, 11.0])
+        # Nos nós, a curva reproduz os valores sem arredondamento de interpolação.
+        curva = CurvaCalibracao(valores, valores, "linear")
         limiar = 1.0 / stats.median_abs_deviation(valores, scale="normal")
-        resultado = medir(_registros(valores.tolist()), "PT102", self.curva, limiar=limiar)
+        resultado = medir(_registros(valores.tolist()), "PT102", curva, limiar=limiar)
         self.assertEqual(resultado.espurias, [])
         self.assertEqual(resultado.n_validas, 3)
         self.assertAlmostEqual(resultado.medida.valor, 10.0)
