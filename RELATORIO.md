@@ -38,32 +38,35 @@ A diferença medida entre 261,99 kPa e 380,00 kPa ocorre porque o transmissor po
 
 ### R5 — Previsão × medição (Etapa 3)
 
-Previsões: não foram registradas antes da implementação. Não existe hash de commit de previsões.
-As lacunas abaixo registram essa pendência; estimativas feitas agora não seriam previsões prévias.
+As estimativas abaixo foram propostas retrospectivamente, com auxílio de IA, após a implementação e a medição.
+São hipóteses ilustrativas para discutir os resultados, não previsões registradas antes do experimento.
 
-| Grandeza | Previsão | Medido |
+| Grandeza | Previsão (retrospectiva) | Medido |
 | --- | --- | --- |
-| Memória da lista / memória do `uint16` | Não registrada | 18,000028 |
-| Tempo do laço / tempo vetorizado | Não registrada | 13,67 |
-| Tempo da compreensão / tempo do laço | Não registrada | 0,924 |
+| Memória da lista / memória do `uint16` | 18 | 18,000028 |
+| Tempo do laço / tempo vetorizado | 20 | 13,67 |
+| Tempo da compreensão / tempo do laço | 0,8 | 0,924 |
 
-Sem previsões prévias, não é possível avaliar a maior diferença entre previsão e medição.
-Para 1 milhão de contagens, a lista ocupou 36.000.056 bytes e `uint16`, 2.000.000 bytes: a lista inclui referências e objetos inteiros.
+Para memória, a estimativa usa 8 bytes por referência e 28 por inteiro Python neste ambiente: `(8 + 28) / 2 = 18`; a lista medida inclui ainda 56 bytes de estrutura.
+As hipóteses de tempo são uma aceleração de 20 vezes com NumPy e uma redução de 20% com compreensão; são estimativas aproximadas, não garantias.
+A maior diferença relativa é 13,67 contra 20 (31,65% abaixo): alocações, tráfego de memória e custo das operações podem limitar a aceleração vetorizada; esta medição não isola essas causas.
 Os tempos médios de 10 repetições foram 151,275 ms (laço), 139,723 ms (compreensão), 197,182 ms (map+lambda) e 11,068 ms (vetorizado); variam entre execuções.
 O cálculo `4095 * 20 = 81900` excede o limite 65535 de `uint16`; o resultado modular é `81900 - 65536 = 16364`.
 Para armazenar contagens de 0 a 4095, escolheria `uint16`; para pressões em kPa, `float64`, multiplicando em ponto flutuante antes de ocorrer overflow.
 
 ### R6 — Tipos da SerieTemporal (Etapa 4d)
 
-| Expressão | Tipo previsto | Tipo observado |
-| --- | --- | --- |
-| `s + s` | Não registrado | `SerieTemporal` |
-| `s[1:]` | Não registrado | `SerieTemporal` |
-| `s * 2` | Não registrado | `SerieTemporal` |
-| `s.sum()` | Não registrado | `SerieTemporal` |
-| `s[0]` | Não registrado | `float64` |
+Hipóteses retrospectivas: aritmética e fatias preservariam a subclasse, enquanto redução e indexação devolveriam escalares.
 
-As previsões não constam do histórico anterior à Etapa 4.
+| Expressão | Tipo previsto (retrospectivo) | Tipo observado |
+| --- | --- | --- |
+| `s + s` | `SerieTemporal` | `SerieTemporal` |
+| `s[1:]` | `SerieTemporal` | `SerieTemporal` |
+| `s * 2` | `SerieTemporal` | `SerieTemporal` |
+| `s.sum()` | `float64` | `SerieTemporal` |
+| `s[0]` | `float64` | `float64` |
+
+Essas hipóteses foram acrescentadas após a execução e não constam do histórico anterior à Etapa 4.
 O resultado menos intuitivo é `s.sum()`: a redução preserva a subclasse em um array de dimensão zero, embora represente um único número.
 Já `s[0]` extrai um escalar NumPy `float64`; operações aritméticas e fatias preservam `SerieTemporal`.
 
