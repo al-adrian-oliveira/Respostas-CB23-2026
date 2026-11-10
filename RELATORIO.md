@@ -92,3 +92,50 @@ Na revisão, os três testes falharam com o método original de `upstream/main` 
 O histórico não cumpre a exigência de previsões em commit anterior às Etapas 3 e 4, nem a de dois testes da issue #4 escritos antes da correção: apenas um já existia nessa ordem.
 Os novos testes demonstram o defeito original, mas não corrigem retroativamente essa cronologia; os commits existentes foram preservados.
 Esta revisão e a complementação do relatório tiveram auxílio de IA. O aluno ainda deve ler, executar e revisar a entrega e escrever as respostas com suas próprias palavras, como exige o enunciado.
+
+## Marco 2
+
+### Ambiente
+
+Execução em 10/11/2026, no mesmo ambiente virtual do Marco 1; o SciPy já estava instalado.
+
+```text
+=== Etapa 0: ambiente ===
+Python 3.11.2 | NumPy 2.4.6 | SciPy 1.17.1 | fornecido 4.0 | matrícula 3505
+```
+
+### R8 — Derivada numérica
+
+O erro caiu de 1,658e-5 em h = 1 para 6,224e-10 em h = 1e-5, o menor valor da tabela.
+Nos passos maiores, domina o truncamento da diferença adiante: ela aproxima a derivada por uma secante, com erro de ordem h.
+Nos passos muito pequenos, o arredondamento e a subtração de valores próximos dominam; dividir por h amplifica os erros, que voltam a crescer.
+Foi confirmado que `1000 + 1e-14 == 1000`: o incremento não é representável nessa escala, e a diferença calculada é zero.
+Assim, a derivada numérica é zero e o erro absoluto é o módulo da derivada exata, 0,213432888873 kPa/contagem (2,134e-1 na tabela).
+
+### R9 — Issue #7
+
+Os testes `test_milhao_de_decimos` e `test_parcelas_pequenas_entre_grandes` falharam antes da correção e foram registrados no commit `4b4c163`, anterior a `fd404c4`.
+O primeiro encontrou 100000,00000133288 em vez de 100000,0; o segundo perdeu duas unidades entre 1e16 e -1e16, devolvendo 0,0 em vez de 2,0.
+Como `t` já contém o resultado arredondado de `s + y`, recalcular `t - (s + y)` subtrai valores idênticos e zera a compensação.
+Em `(t - s) - y`, a subtração recupera primeiro a parcela efetivamente somada; compará-la com y registra o arredondamento para a próxima adição, pois ponto flutuante não é associativo.
+A correção alterou apenas os parênteses; ambos os testes passaram e o total de um milhão de décimos passou a 100000,0, com erro zero nessa execução.
+A aceitação somava apenas dez décimos e usava `math.isclose` com tolerância padrão, que aceita o pequeno erro da soma ingênua nesse caso.
+
+### R10 — Precisão × exatidão
+
+Para PT102, os desvios foram 0,530 kPa (linear) e 0,531 kPa (spline): as leituras têm precisão semelhante, isto é, dispersão semelhante.
+Os vieses em relação a 380 kPa foram -1,813 kPa (linear) e +0,017 kPa (spline); a spline apresentou maior exatidão, ficando mais perto da referência.
+Após descartar os índices [57, 139, 288, 383, 480], restaram 595 leituras de PT102 em cada curva.
+A média reduz o erro aleatório, mas não elimina o viés sistemático de interpolação da curva linear; a incerteza instrumental de 1,5 kPa também não diminui com o número de leituras.
+A altura obtida com a spline foi 35,75 ± 0,22 m, compatível com a referência de 35,749 m, com incerteza relativa de 0,61%.
+
+### Validação do Marco 2
+
+- Os dois testes de regressão de Kahan foram executados e falharam antes da alteração em `acumuladores.py`; após a correção, ambos passaram.
+- `python -m unittest fornecido.testes_aceitacao.test_aceitacao_m1 fornecido.testes_aceitacao.test_aceitacao_m2 testes.test_dados testes.test_medicao -v`: 60 testes passaram.
+- `testes/test_medicao.py` contém 9 testes novos além do exemplo: 2 de Kahan e 7 de regras de medição não cobertas pela aceitação.
+- `python marco1.py` e `python marco2.py`: todos os asserts passaram, com matrícula 3505.
+- `git fetch upstream` seguido de `git diff upstream/main --stat -- fornecido/ marco2.py`: nenhuma diferença; `calibracao.py` também permaneceu intacto.
+- `python -m unittest discover -v`: 78 testes, com 12 erros por `NotImplementedError` dos Marcos 3–4; nenhuma falha dos Marcos 1–2. O checklist global depende da implementação dos marcos posteriores.
+
+As respostas e o código deste marco foram preparados com auxílio de IA e precisam ser lidos e revisados pelo aluno antes da entrega.
