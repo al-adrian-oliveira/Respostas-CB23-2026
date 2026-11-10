@@ -139,3 +139,79 @@ A altura obtida com a spline foi 35,75 ± 0,22 m, compatível com a referência 
 - `python -m unittest discover -v`: 78 testes, com 12 erros por `NotImplementedError` dos Marcos 3–4; nenhuma falha dos Marcos 1–2. O checklist global depende da implementação dos marcos posteriores.
 
 As respostas e o código deste marco foram preparados com auxílio de IA e precisam ser lidos e revisados pelo aluno antes da entrega.
+
+## Marco 3
+
+### Ambiente
+
+Execução em 10/11/2026 no ambiente virtual do projeto: Python 3.11.2, NumPy 2.4.6, SciPy 1.17.1, fornecido 4.0 e matrícula 3505.
+
+### R11 — Bissecção × Newton
+
+Colebrook usa sempre [2, 15] e tolerância 1e-12; reduzir a largura 13 pela metade exige 44 iterações, pois `13 / 2**44 < 1e-12`, independentemente de Reynolds nesses casos.
+Newton levou 5, 4 e 3 iterações para Re = 1e4, 1e5 e 1e6, com ordens estimadas de 2,00, 1,98 e 2,00.
+Ordem 2 significa que, perto de uma raiz simples, o próximo erro é aproximadamente proporcional ao quadrado do anterior, dobrando aproximadamente o número de dígitos corretos.
+Em Re = 1e4, os erros caíram de 5,0e-2 para 2,3e-5 e 5,0e-12, antes de atingir o arredondamento.
+Para `f(x) = x³ - 1` em [-2, 2], Newton com derivada analítica começa em zero e falha por derivada nula; a bissecção encontra a raiz 1, pois há troca de sinal e a função é contínua.
+
+### R12 — Issue #9
+
+Os testes `test_quadratica_com_derivada_analitica` e `test_colebrook_com_derivada_numerica` exigem convergência em até seis iterações e falharam no código original.
+Eles foram registrados em `07ab873`, antes da correção `79e9908`; ambos passaram após mover o cálculo da derivada para dentro do laço de Newton.
+Com a derivada fixa em d, a atualização é `x - f(x)/d`; em geral, o erro mantém o termo linear `e_n * (1 - f'(raiz)/d)`.
+Recalcular a derivada em cada aproximação elimina esse termo no limite, permitindo convergência quadrática perto de uma raiz simples, com derivada suficientemente precisa.
+A aceitação conferia convergência e valor final com até 100 iterações, mas não a velocidade ou a ordem; assim, a versão lenta ainda passava.
+
+### Validação do Marco 3
+
+- `python -m unittest fornecido.testes_aceitacao.test_aceitacao_m3 testes.test_operacao -v`: 16 testes passaram, incluindo 7 próprios além do exemplo.
+- `python marco3.py`: todos os asserts passaram; com spline, o ponto foi Q = 65,089 L/s e H = 35,857 m, contra a referência Q = 64,873 L/s e H = 35,741 m.
+- Para o ponto de operação, Newton levou 5 iterações e a bissecção 40, tanto com a curva linear quanto com a spline.
+- Além das regressões, os testes cobrem intervalos inválidos, domínio da bomba, não convergência e filtragem pelo piso relativo dos erros.
+
+## Marco 4
+
+### Ambiente
+
+Mesmo ambiente e matrícula do Marco 3; não foi necessário instalar dependências.
+
+### R13 — Integração e descontinuidade
+
+Ao integrar o custo de uma vez, a ordem observada foi 1,00 para o trapézio e 0,65 para Simpson; por faixas, foi 2,00 e 4,00, respectivamente.
+Os saltos de tarifa às 18 h e 21 h quebram a suavidade exigida pelas estimativas de erro das regras; o erro nos subintervalos que contêm o salto pode dominar e ser proporcional ao passo.
+A ordem estimada também depende do alinhamento desses saltos com a malha, por isso não precisa ser exatamente 1 na sequência de tamanhos usada.
+Ao separar as faixas, a tarifa fica constante em cada integral e a potência é suave, recuperando as ordens teóricas 2 e 4.
+Com n = 110 por faixa, os erros no custo foram 6,3e-4 e 8,1e-8 reais, respectivamente.
+
+### R14 — Issue #11
+
+Os testes `test_constante_em_malha_irregular` e `test_reta_em_malha_irregular` falharam antes da correção: retornavam 4 em vez de 6 e 38 em vez de 42.
+Foram registrados em `07ab873`, antes da correção `0b06b50`; ambos passaram após usar `np.diff(x)` como larguras dos trapézios.
+O código original multiplicava toda a soma pelo primeiro espaçamento, supondo que nenhuma leitura faltava; em malha irregular, cada área precisa de sua própria largura.
+A aceitação só verificava o trapézio com tabela uniforme, na qual o defeito não aparece.
+A implementação fornecida de Simpson exige malha uniforme e número ímpar de pontos; o registro tem 89 leituras, mas intervalos de 15 e 30 minutos, então viola a uniformidade.
+O volume corrigido foi 3873,07 m³ contra 3888,00 m³ de referência, com erro de 0,38%, dentro do limite de 1,5% do script.
+
+### Ajuste e balanço medidos
+
+Foi usado `np.polynomial.polynomial.polyfit`: resolve o ajuste por mínimos quadrados e já fornece os coeficientes em ordem crescente, compatíveis com `polyval`.
+Os ajustes de grau 2 tiveram erros máximos de 0,043 m na altura e 0,0058 no rendimento; a potência foi calculada pela função fornecida e o custo integrado separadamente em cada faixa.
+
+| Grandeza | Calculado | Referência | Erro relativo |
+| --- | --- | --- | --- |
+| Volume (m³) | 3873,07 | 3888,00 | 0,38% |
+| Energia (kWh) | 651,57 | 655,56 | 0,61% |
+| Custo (R$) | 413,36 | 416,01 | 0,64% |
+
+Os custos de 0–18 h, 18–21 h e 21–24 h foram R$ 240,05, R$ 131,36 e R$ 41,95. A ponta concentrou 31,8% do custo em 12,5% das horas.
+
+### Validação final dos quatro marcos
+
+- `python -m unittest discover -v`: **93 testes, todos passando**, incluindo os testes de aceitação dos quatro marcos e os testes próprios.
+- O Marco 4 tem 8 testes próprios além do exemplo: 2 regressões e 6 testes adicionais de ajuste, limites tarifários, balanço irregular e propagação de erro do rendimento.
+- `python marco1.py`, `python marco2.py`, `python marco3.py` e `python marco4.py`: todos os asserts passaram com matrícula 3505.
+- Após `git fetch upstream`, a referência `upstream/main` já está contida na branch. `git diff upstream/main --stat -- fornecido/ marco2.py marco3.py marco4.py` não mostrou diferenças.
+- Os erros dos Marcos 3–4 registrados nas validações anteriores deste relatório foram resolvidos nesta etapa; aqueles números descrevem as execuções históricas.
+- O commit dos testes antecede os commits das correções das issues #9 e #11; as quatro regressões falharam antes e passaram depois.
+
+As implementações e respostas destes marcos tiveram auxílio de IA. Permanecem necessárias a revisão pessoal pelo aluno, a publicação dos commits e a conferência da descrição e do estado do PR antes da entrega; as pendências históricas do Marco 1 continuam documentadas na sua seção.
