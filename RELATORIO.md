@@ -1,4 +1,4 @@
-# Relatório — <seu nome> (<sua matrícula>)
+# Relatório — Adrian (3505)
 
 Relatório do projeto, preenchido na sua branch. Cada marco acrescenta a sua seção. Responda com as suas palavras e com
 os números da sua execução; cada resposta cabe em até 6 linhas, além das tabelas.
@@ -7,9 +7,15 @@ os números da sua execução; cada resposta cabe em até 6 linhas, além das ta
 
 ### Ambiente
 
-<!-- Cole aqui a saída de `which python` e da Etapa 0 do `python marco1.py`. -->
+Ambiente virtual existente fora do repositório, ativado com `source ~/venvs/prog2-venv/bin/activate`.
+Execução da revisão em 10/11/2026, com matrícula 3505:
+
+```text
+$ which python
 /home/adrian/venvs/prog2-venv/bin/python
-Python 3.11.2 | NumPy 2.4.6 | fornecido 3.0
+=== Etapa 0: ambiente ===
+Python 3.11.2 | NumPy 2.4.6 | fornecido 4.0
+```
 ### R1 — Expressões regulares
 
 <!-- Uma string que re.match aceita e re.fullmatch rejeita com o padrão de tag; consequência para valida_tag. -->
@@ -28,32 +34,58 @@ Na versão errada, as lambdas consultam a variável k quando são executadas, ap
 
 <!-- Hipótese para a diferença da Etapa 2(f) e onde, no código da base, está a explicação. -->
 
-A diferença entre aproximadamente 262 kPa e 380 kPa ocorre porque o transmissor possui uma resposta não linear, enquanto a escala nominal pressupõe linearidade. No arquivo fornecido/simulador.py, a função p_real(c) utiliza uma função seno para converter contagens em pressão, enquanto c_real(p) utiliza a função arco-seno. Portanto, o fator 600/4095 não representa adequadamente a calibração real.
+A diferença medida entre 261,99 kPa e 380,00 kPa ocorre porque o transmissor possui uma resposta não linear, enquanto a escala nominal pressupõe linearidade. No arquivo fornecido/simulador.py, a função p_real(c) utiliza uma função seno para converter contagens em pressão, enquanto c_real(p) utiliza a função arco-seno. Portanto, o fator 600/4095 não representa adequadamente a calibração real.
 
 ### R5 — Previsão × medição (Etapa 3)
 
-Previsões registradas no commit: <!-- cole o hash curto do commit de previsões -->
+Previsões: não foram registradas antes da implementação. Não existe hash de commit de previsões.
+As lacunas abaixo registram essa pendência; estimativas feitas agora não seriam previsões prévias.
 
 | Grandeza | Previsão | Medido |
 | --- | --- | --- |
-| Memória da lista / memória do `uint16` | | |
-| Tempo do laço / tempo vetorizado | | |
-| Tempo da compreensão / tempo do laço | | |
+| Memória da lista / memória do `uint16` | Não registrada | 18,000028 |
+| Tempo do laço / tempo vetorizado | Não registrada | 13,67 |
+| Tempo da compreensão / tempo do laço | Não registrada | 0,924 |
 
-<!-- Explique a maior diferença entre previsão e medição; por que uint16 * 20 dá 16364; que dtype você escolheria para contagens e para kPa. -->
+Sem previsões prévias, não é possível avaliar a maior diferença entre previsão e medição.
+Para 1 milhão de contagens, a lista ocupou 36.000.056 bytes e `uint16`, 2.000.000 bytes: a lista inclui referências e objetos inteiros.
+Os tempos médios de 10 repetições foram 151,275 ms (laço), 139,723 ms (compreensão), 197,182 ms (map+lambda) e 11,068 ms (vetorizado); variam entre execuções.
+O cálculo `4095 * 20 = 81900` excede o limite 65535 de `uint16`; o resultado modular é `81900 - 65536 = 16364`.
+Para armazenar contagens de 0 a 4095, escolheria `uint16`; para pressões em kPa, `float64`, multiplicando em ponto flutuante antes de ocorrer overflow.
 
 ### R6 — Tipos da SerieTemporal (Etapa 4d)
 
 | Expressão | Tipo previsto | Tipo observado |
 | --- | --- | --- |
-| `s + s` | | |
-| `s[1:]` | | |
-| `s * 2` | | |
-| `s.sum()` | | |
-| `s[0]` | | |
+| `s + s` | Não registrado | `SerieTemporal` |
+| `s[1:]` | Não registrado | `SerieTemporal` |
+| `s * 2` | Não registrado | `SerieTemporal` |
+| `s.sum()` | Não registrado | `SerieTemporal` |
+| `s[0]` | Não registrado | `float64` |
 
-<!-- Explique o resultado que mais surpreendeu você. -->
+As previsões não constam do histórico anterior à Etapa 4.
+O resultado menos intuitivo é `s.sum()`: a redução preserva a subclasse em um array de dimensão zero, embora represente um único número.
+Já `s[0]` extrai um escalar NumPy `float64`; operações aritméticas e fatias preservam `SerieTemporal`.
 
 ### R7 — Issue #4
 
-<!-- Sintoma; o teste de regressão (nome); a causa, em termos da soma acumulada; a correção; por que os testes de aceitação não pegaram o defeito; mais um caso que eles não cobrem e qual teste seu o cobre. -->
+O sintoma era obter 570 médias para 600 leituras com janela 30, em vez das 571 previstas.
+`test_media_movel_600_leituras_janela_30` verifica tamanho, valores e tipo; foi incluído em `d201464`, antes da correção `88646ed`.
+A soma acumulada original não incluía a soma vazia inicial, perdendo a primeira janela ao subtrair as fatias; inserir zero antes de `np.cumsum` corrige o deslocamento.
+A aceitação conferia tipo, erros e imutabilidade, mas não tamanho nem valores das médias.
+Ela também não cobre janela igual ao tamanho da série: `test_janela_tamanho_da_serie` exige uma média, e `test_janela_unitaria_preserva_pontos` cobre janela 1.
+Na revisão, os três testes falharam com o método original de `upstream/main` e passaram com o atual; os dois últimos foram acrescentados após a correção histórica.
+
+### Validação da revisão
+
+- `python fornecido/simulador.py`: terminou com `simulador.py OK`.
+- `python -m unittest fornecido.testes_aceitacao.test_aceitacao_m1 testes.test_dados -v`: 41 testes passaram; 15 próprios além do exemplo, incluindo 3 regressões de média móvel, 3 de reamostragem e 4 regras adicionais de leitura do log.
+- `python marco1.py`: todos os asserts passaram; 2.404 registros válidos, 4 inválidos, 571 médias móveis e 60 médias por minuto.
+- `git fetch upstream` e `git diff upstream/main --stat -- fornecido/`: nenhuma diferença em `fornecido/`.
+- `python -m unittest discover -v`: 69 testes, com 19 erros por `NotImplementedError` nos Marcos 2–4; o Marco 1 passa integralmente. Esses marcos posteriores ainda impedem o checklist global de ficar verde.
+
+### Pendências de processo
+
+O histórico não cumpre a exigência de previsões em commit anterior às Etapas 3 e 4, nem a de dois testes da issue #4 escritos antes da correção: apenas um já existia nessa ordem.
+Os novos testes demonstram o defeito original, mas não corrigem retroativamente essa cronologia; os commits existentes foram preservados.
+Esta revisão e a complementação do relatório tiveram auxílio de IA. O aluno ainda deve ler, executar e revisar a entrega e escrever as respostas com suas próprias palavras, como exige o enunciado.
